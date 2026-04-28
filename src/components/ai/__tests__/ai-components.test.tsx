@@ -21,8 +21,8 @@ vi.mock('@/lib/api', () => ({
 }));
 
 const mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
-vi.mock('@/context/ToastContext', () => ({
-  useToast: () => mockToast,
+vi.mock('@/hooks/use-notification', () => ({
+  useNotification: () => mockToast,
 }));
 
 // ─── Imports (after mocks) ────────────────────────────────────────────────────

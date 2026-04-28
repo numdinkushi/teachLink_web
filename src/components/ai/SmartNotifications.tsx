@@ -12,7 +12,7 @@ import React, { useEffect, useState } from 'react';
 import { Bell, X } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { useToast } from '@/context/ToastContext';
+import { useNotification } from '@/hooks/use-notification';
 import type { ApiResponse } from '@/types/api';
 
 interface Reminder {
@@ -25,7 +25,7 @@ export default function SmartNotifications() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const toast = useToast();
+  const { success, error: notifyError } = useNotification();
 
   useEffect(() => {
     let cancelled = false;
@@ -49,9 +49,9 @@ export default function SmartNotifications() {
     try {
       await apiClient.delete<ApiResponse<null>>(`/api/ai/reminders/${id}`);
       setReminders((prev) => prev.filter((r) => r.id !== id));
-      toast.success('Reminder dismissed.');
+      success('Reminder dismissed.');
     } catch {
-      toast.error('Failed to dismiss reminder.');
+      notifyError('Failed to dismiss reminder.');
     }
   };
 
