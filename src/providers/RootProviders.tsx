@@ -70,15 +70,21 @@ export function RootProviders({
   defaultLocale = 'en',
 }: RootProvidersProps) {
   return (
-    <I18nextProvider i18n={i18n}>
-      <FeatureFlagProvider>
-        <I18nProvider defaultLanguage={defaultLocale as import('@/locales/types').LanguageCode}>
-          <InternationalizationEngine>
-            <CulturalAdaptationManager>
-              <ThemeProvider defaultTheme={defaultTheme}>
-                <ThemeFromSettingsBootstrap />
-                <LegacyStorePreferencesBridge />
-                <RemoteSettingsSync />
+    <FeatureFlagProvider>
+    <I18nProvider>
+      <InternationalizationEngine>
+        <CulturalAdaptationManager>
+          <ThemeProvider defaultTheme={defaultTheme}>
+            <ThemeFromSettingsBootstrap />
+            <LegacyStorePreferencesBridge />
+            <RemoteSettingsSync />
+            <Suspense fallback={null}>
+              <DynamicTheming />
+            </Suspense>
+            <EnvGuard>
+              <AccessibilityProvider pageLabel="TeachLink - main application">
+                <RouteChangeAnnouncer />
+                <CommandPalette />
                 <Suspense fallback={null}>
                   <DynamicTheming />
                 </Suspense>
