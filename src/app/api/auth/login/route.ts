@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withRateLimit } from '@/lib/ratelimit';
+import type { AuthResponse } from '@/types/api';
+import { edgeLog } from '@/../infra/edge-config';
+
+export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
+  edgeLog('info', '/api/auth/login', 'POST request received');
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'AUTH');
   if (rateLimitResponse) {
-    return rateLimitResponse as NextResponse<AuthResponse | { message: string }>;
+    return rateLimitResponse as NextResponse<{ message: string }>;
   }
 
   try {
@@ -15,7 +20,7 @@ export async function POST(request: NextRequest) {
     if (!email || !password) {
       return addHeaders(
         NextResponse.json({ message: 'Email and password are required' }, { status: 400 }),
-      );
+      ) as NextResponse<{ message: string }>;
     }
 
     // Mock authentication - check for demo credentials
@@ -34,7 +39,7 @@ export async function POST(request: NextRequest) {
           },
           { status: 200 },
         ),
-      );
+      ) as NextResponse<AuthResponse>;
     }
 
     // Mock: Accept any valid email format with password length >= 6
@@ -52,13 +57,17 @@ export async function POST(request: NextRequest) {
           },
           { status: 200 },
         ),
-      );
+      ) as NextResponse<AuthResponse>;
     }
 
     // Invalid credentials
-    return addHeaders(NextResponse.json({ message: 'Invalid email or password' }, { status: 401 }));
+    return addHeaders(
+      NextResponse.json({ message: 'Invalid email or password' }, { status: 401 }),
+    ) as NextResponse<{ message: string }>;
   } catch (error) {
     console.error('Login error:', error);
-    return addHeaders(NextResponse.json({ message: 'Internal server error' }, { status: 500 }));
+    return addHeaders(
+      NextResponse.json({ message: 'Internal server error' }, { status: 500 }),
+    ) as NextResponse<{ message: string }>;
   }
 }
