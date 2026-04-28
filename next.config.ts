@@ -2,7 +2,12 @@ import type { NextConfig } from 'next';
 import path from 'path';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  modularizeImports: {
+    lodash: {
+      transform: 'lodash/{{member}}',
+    },
+  },
+
   eslint: {
     // Many legacy files do not match Prettier; keep type checking without blocking production builds.
     ignoreDuringBuilds: true,
