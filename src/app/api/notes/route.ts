@@ -25,6 +25,7 @@ const keyFor = (userId: string | undefined, lessonId: string): string => {
   return `${safeUserId}::${encodeURIComponent(lessonId)}`;
 };
 
+
 // ---------------------------------------------------------------------------
 // GET /api/notes?lessonId=&userId=
 // ---------------------------------------------------------------------------
@@ -39,6 +40,23 @@ export async function GET(
   const result = validateQuery(NotesGetQuerySchema, searchParams);
   if (!result.ok) return addHeaders(result.error) as NextResponse;
 
+export async function GET(request: Request) {
+  const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
+  if (rateLimitResponse) {
+    return rateLimitResponse as NextResponse<ApiResponse<PersistedVideoNote[]> | SuccessResponse>;
+  }
+
+  const { searchParams } = new URL(request.url);
+  const lessonId = searchParams.get('lessonId');
+  const userId = searchParams.get('userId') ?? undefined;
+
+  if (!lessonId) {
+    return addHeaders(
+      NextResponse.json({ success: false, message: 'lessonId is required' }, { status: 400 }),
+    );
+  }
+
+
   return addHeaders(
     NextResponse.json({
       data: notesStore.get(keyFor(result.data.userId, result.data.lessonId)) ?? [],
@@ -46,6 +64,7 @@ export async function GET(
     }),
   );
 }
+
 
 // ---------------------------------------------------------------------------
 // POST /api/notes
@@ -59,6 +78,25 @@ export async function POST(
 
   const result = validateBody(NotesCreateBodySchema, await request.json());
   if (!result.ok) return addHeaders(result.error) as NextResponse;
+
+export async function POST(request: Request) {
+  const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
+  if (rateLimitResponse) {
+    return rateLimitResponse as NextResponse<ApiResponse<PersistedVideoNote> | SuccessResponse>;
+  }
+
+  const body = (await request.json()) as {
+    userId?: string;
+    lessonId: string;
+    note: { id?: string; time: number; text: string };
+  };
+
+  if (!body?.lessonId || !body?.note?.time || !body?.note?.text) {
+    return addHeaders(
+      NextResponse.json({ success: false, message: 'Invalid payload' }, { status: 400 }),
+    );
+  }
+
 
   const now = new Date().toISOString();
   const persisted: VideoNote = {
@@ -76,6 +114,7 @@ export async function POST(
   return addHeaders(NextResponse.json({ success: true, data: persisted }));
 }
 
+
 // ---------------------------------------------------------------------------
 // PATCH /api/notes
 // ---------------------------------------------------------------------------
@@ -86,6 +125,27 @@ export async function PATCH(request: Request): Promise<NextResponse<NotesSuccess
 
   const result = validateBody(NotesPatchBodySchema, await request.json());
   if (!result.ok) return addHeaders(result.error) as NextResponse;
+
+export async function PATCH(request: Request) {
+  const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
+  if (rateLimitResponse) {
+    return rateLimitResponse as NextResponse<SuccessResponse>;
+  }
+
+  const body = (await request.json()) as {
+    userId?: string;
+    lessonId: string;
+    id: string;
+    text: string;
+    time?: number;
+  };
+
+  if (!body?.lessonId || !body?.id || !body?.text) {
+    return addHeaders(
+      NextResponse.json({ success: false, message: 'Invalid payload' }, { status: 400 }),
+    );
+  }
+
 
   const key = keyFor(result.data.userId, result.data.lessonId);
   const prev = notesStore.get(key) ?? [];
@@ -108,6 +168,7 @@ export async function PATCH(request: Request): Promise<NextResponse<NotesSuccess
   return addHeaders(NextResponse.json({ success: true }));
 }
 
+
 // ---------------------------------------------------------------------------
 // DELETE /api/notes
 // ---------------------------------------------------------------------------
@@ -118,6 +179,20 @@ export async function DELETE(request: Request): Promise<NextResponse<NotesSucces
 
   const result = validateBody(NotesDeleteBodySchema, await request.json());
   if (!result.ok) return addHeaders(result.error) as NextResponse;
+
+export async function DELETE(request: Request) {
+  const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
+  if (rateLimitResponse) {
+    return rateLimitResponse as NextResponse<SuccessResponse>;
+  }
+
+  const body = (await request.json()) as { userId?: string; lessonId: string; id: string };
+  if (!body?.lessonId || !body?.id) {
+    return addHeaders(
+      NextResponse.json({ success: false, message: 'Invalid payload' }, { status: 400 }),
+    );
+  }
+
 
   const key = keyFor(result.data.userId, result.data.lessonId);
   const prev = notesStore.get(key) ?? [];

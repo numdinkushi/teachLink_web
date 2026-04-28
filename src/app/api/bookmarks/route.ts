@@ -25,6 +25,7 @@ const keyFor = (userId: string | undefined, lessonId: string): string => {
   return `${safeUserId}::${encodeURIComponent(lessonId)}`;
 };
 
+
 // ---------------------------------------------------------------------------
 // GET /api/bookmarks?lessonId=&userId=
 // ---------------------------------------------------------------------------
@@ -39,6 +40,25 @@ export async function GET(
   const result = validateQuery(BookmarksGetQuerySchema, searchParams);
   if (!result.ok) return addHeaders(result.error) as NextResponse;
 
+export async function GET(request: Request) {
+  const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
+  if (rateLimitResponse) {
+    return rateLimitResponse as NextResponse<
+      ApiResponse<PersistedVideoBookmark[]> | SuccessResponse
+    >;
+  }
+
+  const { searchParams } = new URL(request.url);
+  const lessonId = searchParams.get('lessonId');
+  const userId = searchParams.get('userId') ?? undefined;
+
+  if (!lessonId) {
+    return addHeaders(
+      NextResponse.json({ success: false, message: 'lessonId is required' }, { status: 400 }),
+    );
+  }
+
+
   return addHeaders(
     NextResponse.json({
       data: bookmarksStore.get(keyFor(result.data.userId, result.data.lessonId)) ?? [],
@@ -46,6 +66,7 @@ export async function GET(
     }),
   );
 }
+
 
 // ---------------------------------------------------------------------------
 // POST /api/bookmarks
@@ -59,6 +80,25 @@ export async function POST(
 
   const result = validateBody(BookmarksCreateBodySchema, await request.json());
   if (!result.ok) return addHeaders(result.error) as NextResponse;
+
+export async function POST(request: Request) {
+  const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
+  if (rateLimitResponse) {
+    return rateLimitResponse as NextResponse<ApiResponse<PersistedVideoBookmark> | SuccessResponse>;
+  }
+
+  const body = (await request.json()) as {
+    userId?: string;
+    lessonId: string;
+    bookmark: { id?: string; time: number; title: string; note?: string };
+  };
+
+  if (!body?.lessonId || !body?.bookmark?.time || !body?.bookmark?.title) {
+    return addHeaders(
+      NextResponse.json({ success: false, message: 'Invalid payload' }, { status: 400 }),
+    );
+  }
+
 
   const now = new Date().toISOString();
   const persisted: VideoBookmark = {
@@ -77,6 +117,7 @@ export async function POST(
   return addHeaders(NextResponse.json({ success: true, data: persisted }));
 }
 
+
 // ---------------------------------------------------------------------------
 // PATCH /api/bookmarks
 // ---------------------------------------------------------------------------
@@ -87,6 +128,28 @@ export async function PATCH(request: Request): Promise<NextResponse<BookmarksSuc
 
   const result = validateBody(BookmarksPatchBodySchema, await request.json());
   if (!result.ok) return addHeaders(result.error) as NextResponse;
+
+export async function PATCH(request: Request) {
+  const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
+  if (rateLimitResponse) {
+    return rateLimitResponse as NextResponse<SuccessResponse>;
+  }
+
+  const body = (await request.json()) as {
+    userId?: string;
+    lessonId: string;
+    id: string;
+    title: string;
+    note?: string;
+    time?: number;
+  };
+
+  if (!body?.lessonId || !body?.id || !body?.title) {
+    return addHeaders(
+      NextResponse.json({ success: false, message: 'Invalid payload' }, { status: 400 }),
+    );
+  }
+
 
   const key = keyFor(result.data.userId, result.data.lessonId);
   const prev = bookmarksStore.get(key) ?? [];
@@ -110,6 +173,7 @@ export async function PATCH(request: Request): Promise<NextResponse<BookmarksSuc
   return addHeaders(NextResponse.json({ success: true }));
 }
 
+
 // ---------------------------------------------------------------------------
 // DELETE /api/bookmarks
 // ---------------------------------------------------------------------------
@@ -120,6 +184,20 @@ export async function DELETE(request: Request): Promise<NextResponse<BookmarksSu
 
   const result = validateBody(BookmarksDeleteBodySchema, await request.json());
   if (!result.ok) return addHeaders(result.error) as NextResponse;
+
+export async function DELETE(request: Request) {
+  const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
+  if (rateLimitResponse) {
+    return rateLimitResponse as NextResponse<SuccessResponse>;
+  }
+
+  const body = (await request.json()) as { userId?: string; lessonId: string; id: string };
+  if (!body?.lessonId || !body?.id) {
+    return addHeaders(
+      NextResponse.json({ success: false, message: 'Invalid payload' }, { status: 400 }),
+    );
+  }
+
 
   const key = keyFor(result.data.userId, result.data.lessonId);
   const prev = bookmarksStore.get(key) ?? [];

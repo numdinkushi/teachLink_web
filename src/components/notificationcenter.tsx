@@ -1,27 +1,26 @@
-import React, { useState, useRef, useEffect } from "react";
-import {
-  Notification,
-  NotificationType,
-  useNotifications,
-} from "@/providers/Notificationprovider";
+import React, { useState, useRef, useEffect } from 'react';
+import { BellOff } from 'lucide-react';
+import { Notification, NotificationType, useNotifications } from '@/providers/Notificationprovider';
+import { EmptyState } from '@/components';
+import Image from 'next/image';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Icon helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
 const TYPE_ICON: Record<NotificationType, string> = {
-  info: "ℹ️",
-  success: "✅",
-  warning: "⚠️",
-  error: "❌",
-  message: "💬",
-  course: "📚",
-  system: "🔔",
+  info: 'ℹ️',
+  success: '✅',
+  warning: '⚠️',
+  error: '❌',
+  message: '💬',
+  course: '📚',
+  system: '🔔',
 };
 
 function timeAgo(date: Date): string {
   const diff = (Date.now() - date.getTime()) / 1000;
-  if (diff < 60) return "just now";
+  if (diff < 60) return 'just now';
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
@@ -47,15 +46,23 @@ function NotificationItem({ notification, onRead, onClear }: NotificationItemPro
 
   return (
     <div
-      className={`notification-item ${read ? "notification-item--read" : "notification-item--unread"}`}
+      className={`notification-item ${
+        read ? 'notification-item--read' : 'notification-item--unread'
+      }`}
       onClick={handleClick}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === "Enter" && handleClick()}
+      onKeyDown={(e) => e.key === 'Enter' && handleClick()}
     >
       <div className="notification-item__icon">
         {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="notification-item__avatar" />
+          <Image
+            src={avatarUrl}
+            alt=""
+            className="notification-item__avatar"
+            width={40}
+            height={40}
+          />
         ) : (
           <span aria-hidden="true">{TYPE_ICON[type]}</span>
         )}
@@ -63,17 +70,17 @@ function NotificationItem({ notification, onRead, onClear }: NotificationItemPro
       <div className="notification-item__body">
         <p className="notification-item__title">{title}</p>
         {body && <p className="notification-item__text">{body}</p>}
-        <time
-          className="notification-item__time"
-          dateTime={timestamp.toISOString()}
-        >
+        <time className="notification-item__time" dateTime={timestamp.toISOString()}>
           {timeAgo(timestamp)}
         </time>
       </div>
       {!read && <span className="notification-item__dot" aria-label="Unread" />}
       <button
         className="notification-item__clear"
-        onClick={(e) => { e.stopPropagation(); onClear(id); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClear(id);
+        }}
         aria-label="Dismiss notification"
       >
         ×
@@ -96,14 +103,12 @@ export function NotificationBadge({ count, onClick }: NotificationBadgeProps) {
     <button
       className="notification-badge-btn"
       onClick={onClick}
-      aria-label={`Notifications${count > 0 ? `, ${count} unread` : ""}`}
+      aria-label={`Notifications${count > 0 ? `, ${count} unread` : ''}`}
     >
-      <span className="notification-bell" aria-hidden="true">🔔</span>
-      {count > 0 && (
-        <span className="notification-count">
-          {count > 99 ? "99+" : count}
-        </span>
-      )}
+      <span className="notification-bell" aria-hidden="true">
+        🔔
+      </span>
+      {count > 0 && <span className="notification-count">{count > 99 ? '99+' : count}</span>}
     </button>
   );
 }
@@ -126,8 +131,8 @@ export function NotificationCenter() {
         setOpen(false);
       }
     }
-    if (open) document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
+    if (open) document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
   }, [open]);
 
   // Mark visible unread as read after 3 s when panel is open
@@ -142,11 +147,7 @@ export function NotificationCenter() {
       <NotificationBadge count={unreadCount} onClick={() => setOpen((v) => !v)} />
 
       {open && (
-        <div
-          className="notification-panel"
-          role="dialog"
-          aria-label="Notifications"
-        >
+        <div className="notification-panel" role="dialog" aria-label="Notifications">
           <div className="notification-panel__header">
             <h2>Notifications</h2>
             <div className="notification-panel__actions">
@@ -165,10 +166,7 @@ export function NotificationCenter() {
 
           <div className="notification-panel__list">
             {notifications.length === 0 ? (
-              <div className="notification-empty">
-                <span aria-hidden="true">🔕</span>
-                <p>You&rsquo;re all caught up!</p>
-              </div>
+              <EmptyState icon={BellOff} title="You're all caught up!" className="py-8" />
             ) : (
               notifications.map((n) => (
                 <NotificationItem

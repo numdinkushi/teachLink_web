@@ -8,16 +8,32 @@ import type { AuthResponseDTO, AuthErrorDTO } from '@/types/api/auth.dto';
 // POST /api/auth/login
 // ---------------------------------------------------------------------------
 
+
 export async function POST(
   request: NextRequest,
 ): Promise<NextResponse<AuthResponseDTO | AuthErrorDTO>> {
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'AUTH');
   if (rateLimitResponse) return rateLimitResponse as NextResponse;
+export async function POST(request: NextRequest) {
+  const { addHeaders, rateLimitResponse } = withRateLimit(request, 'AUTH');
+  if (rateLimitResponse) {
+    return rateLimitResponse as NextResponse<AuthResponse | { message: string }>;
+  }
+
 
   const result = validateBody(LoginRequestSchema, await request.json());
   if (!result.ok) return addHeaders(result.error) as NextResponse;
 
+
   const { email, password } = result.data;
+
+    // Mock validation
+    if (!email || !password) {
+      return addHeaders(
+        NextResponse.json({ message: 'Email and password are required' }, { status: 400 }),
+      );
+    }
+
 
   // Mock: demo credentials
   if (email === 'demo@teachlink.com' && password === 'password123') {
