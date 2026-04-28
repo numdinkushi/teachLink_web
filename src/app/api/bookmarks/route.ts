@@ -1,6 +1,28 @@
 import { NextResponse } from 'next/server';
-import type { VideoBookmark, ApiResponse, SuccessResponse } from '@/types/api';
+import type { VideoBookmark } from '@/types/api';
 import { withRateLimit } from '@/lib/ratelimit';
+
+import { validateBody, validateQuery } from '@/lib/validation';
+import {
+  BookmarksGetQuerySchema,
+  BookmarksCreateBodySchema,
+  BookmarksPatchBodySchema,
+  BookmarksDeleteBodySchema,
+} from '@/types/api/bookmarks.dto';
+import type {
+  BookmarksListResponseDTO,
+  BookmarkResponseDTO,
+  BookmarksSuccessResponseDTO,
+} from '@/types/api/bookmarks.dto';
+
+// ---------------------------------------------------------------------------
+// In-memory store (replace with DB layer)
+// ---------------------------------------------------------------------------
+
+const bookmarksStore = new Map<string, VideoBookmark[]>();
+
+const keyFor = (userId: string | undefined, lessonId: string): string => {
+
 import { edgeLog } from '@/../infra/edge-config';
 
 export const runtime = 'edge';
@@ -10,9 +32,25 @@ type PersistedVideoBookmark = VideoBookmark;
 const bookmarksStore = new Map<string, PersistedVideoBookmark[]>();
 
 const keyFor = (userId: string | undefined, lessonId: string) => {
+
   const safeUserId = encodeURIComponent(userId ?? 'anon');
   return `${safeUserId}::${encodeURIComponent(lessonId)}`;
 };
+
+
+// ---------------------------------------------------------------------------
+// GET /api/bookmarks?lessonId=&userId=
+// ---------------------------------------------------------------------------
+
+export async function GET(
+  request: Request,
+): Promise<NextResponse<BookmarksListResponseDTO | BookmarksSuccessResponseDTO>> {
+  const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
+  if (rateLimitResponse) return rateLimitResponse as NextResponse;
+
+  const { searchParams } = new URL(request.url);
+  const result = validateQuery(BookmarksGetQuerySchema, searchParams);
+  if (!result.ok) return addHeaders(result.error) as NextResponse;
 
 export async function GET(request: Request) {
   edgeLog('info', '/api/bookmarks', 'GET request received');
@@ -33,13 +71,28 @@ export async function GET(request: Request) {
     );
   }
 
+
   return addHeaders(
     NextResponse.json({
-      data: bookmarksStore.get(keyFor(userId, lessonId)) ?? [],
+      data: bookmarksStore.get(keyFor(result.data.userId, result.data.lessonId)) ?? [],
       success: true,
     }),
   );
 }
+
+
+// ---------------------------------------------------------------------------
+// POST /api/bookmarks
+// ---------------------------------------------------------------------------
+
+export async function POST(
+  request: Request,
+): Promise<NextResponse<BookmarkResponseDTO | BookmarksSuccessResponseDTO>> {
+  const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
+  if (rateLimitResponse) return rateLimitResponse as NextResponse;
+
+  const result = validateBody(BookmarksCreateBodySchema, await request.json());
+  if (!result.ok) return addHeaders(result.error) as NextResponse;
 
 export async function POST(request: Request) {
   edgeLog('info', '/api/bookmarks', 'POST request received');
@@ -60,25 +113,35 @@ export async function POST(request: Request) {
     );
   }
 
-  const now = new Date().toISOString();
-  const id = body.bookmark.id ?? `bookmark-${Date.now()}`;
 
-  const persisted: PersistedVideoBookmark = {
-    id,
-    time: Math.max(0, body.bookmark.time),
-    title: body.bookmark.title.trim(),
-    note: body.bookmark.note?.trim() ? body.bookmark.note.trim() : undefined,
+  const now = new Date().toISOString();
+  const persisted: VideoBookmark = {
+    id: result.data.bookmark.id ?? `bookmark-${Date.now()}`,
+    time: result.data.bookmark.time,
+    title: result.data.bookmark.title,
+    note: result.data.bookmark.note,
     createdAt: now,
     updatedAt: now,
   };
 
-  const key = keyFor(body.userId, body.lessonId);
+  const key = keyFor(result.data.userId, result.data.lessonId);
   const prev = bookmarksStore.get(key) ?? [];
-  const next = [persisted, ...prev.filter((b) => b.id !== persisted.id)];
-  bookmarksStore.set(key, next);
+  bookmarksStore.set(key, [persisted, ...prev.filter((b) => b.id !== persisted.id)]);
 
   return addHeaders(NextResponse.json({ success: true, data: persisted }));
 }
+
+
+// ---------------------------------------------------------------------------
+// PATCH /api/bookmarks
+// ---------------------------------------------------------------------------
+
+export async function PATCH(request: Request): Promise<NextResponse<BookmarksSuccessResponseDTO>> {
+  const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
+  if (rateLimitResponse) return rateLimitResponse as NextResponse;
+
+  const result = validateBody(BookmarksPatchBodySchema, await request.json());
+  if (!result.ok) return addHeaders(result.error) as NextResponse;
 
 export async function PATCH(request: Request) {
   edgeLog('info', '/api/bookmarks', 'PATCH request received');
@@ -102,25 +165,40 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const key = keyFor(body.userId, body.lessonId);
+
+  const key = keyFor(result.data.userId, result.data.lessonId);
   const prev = bookmarksStore.get(key) ?? [];
   const now = new Date().toISOString();
 
-  const next = prev.map((b) =>
-    b.id === body.id
-      ? {
-          ...b,
-          title: body.title.trim(),
-          note: body.note?.trim() ? body.note.trim() : undefined,
-          time: typeof body.time === 'number' ? Math.max(0, body.time) : b.time,
-          updatedAt: now,
-        }
-      : b,
+  bookmarksStore.set(
+    key,
+    prev.map((b) =>
+      b.id === result.data.id
+        ? {
+            ...b,
+            title: result.data.title,
+            note: result.data.note,
+            time: result.data.time !== undefined ? result.data.time : b.time,
+            updatedAt: now,
+          }
+        : b,
+    ),
   );
 
-  bookmarksStore.set(key, next);
   return addHeaders(NextResponse.json({ success: true }));
 }
+
+
+// ---------------------------------------------------------------------------
+// DELETE /api/bookmarks
+// ---------------------------------------------------------------------------
+
+export async function DELETE(request: Request): Promise<NextResponse<BookmarksSuccessResponseDTO>> {
+  const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
+  if (rateLimitResponse) return rateLimitResponse as NextResponse;
+
+  const result = validateBody(BookmarksDeleteBodySchema, await request.json());
+  if (!result.ok) return addHeaders(result.error) as NextResponse;
 
 export async function DELETE(request: Request) {
   edgeLog('info', '/api/bookmarks', 'DELETE request received');
@@ -136,11 +214,12 @@ export async function DELETE(request: Request) {
     );
   }
 
-  const key = keyFor(body.userId, body.lessonId);
+
+  const key = keyFor(result.data.userId, result.data.lessonId);
   const prev = bookmarksStore.get(key) ?? [];
   bookmarksStore.set(
     key,
-    prev.filter((b) => b.id !== body.id),
+    prev.filter((b) => b.id !== result.data.id),
   );
 
   return addHeaders(NextResponse.json({ success: true }));
