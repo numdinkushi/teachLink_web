@@ -56,7 +56,13 @@ function NotificationItem({ notification, onRead, onClear }: NotificationItemPro
     >
       <div className="notification-item__icon">
         {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="notification-item__avatar" />
+          <Image
+            src={avatarUrl}
+            alt=""
+            className="notification-item__avatar"
+            width={40}
+            height={40}
+          />
         ) : (
           <span aria-hidden="true">{TYPE_ICON[type]}</span>
         )}

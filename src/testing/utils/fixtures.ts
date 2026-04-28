@@ -7,6 +7,8 @@
 // ──────────────────────────────────────────────────────────────────────────────
 
 import { SearchResult } from '@/components/virtualizedsearchresults';
+import type { Message } from '@/app/store/messagingStore';
+import type { Notification } from '@/providers/Notificationprovider';
 import { Course } from '@/types';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -32,6 +34,7 @@ export function makeCourse(overrides: Partial<Course> = {}): Course {
   return {
     id,
     title: `Test Course ${id}`,
+    description: 'Placeholder syllabus for automated tests.',
     instructor: 'Jane Doe',
     thumbnailUrl: `https://picsum.photos/seed/${id}/320/180`,
     progress: 0,
@@ -95,12 +98,15 @@ export function makeMessage(overrides: Partial<Message> = {}): Message {
   const id = seq('msg-');
   return {
     id,
+    conversationId: 'conv-fixture',
     senderId: 'user-1',
     senderName: 'Alice',
+    senderAvatar: 'https://picsum.photos/seed/alice/48/48',
+    receiverId: 'user-2',
     content: `Hello, this is message ${id}.`,
     timestamp: new Date(Date.now() - Math.random() * 3_600_000),
-    isOwn: false,
-    status: 'read',
+    read: false,
+    delivered: false,
     ...overrides,
   };
 }
@@ -115,16 +121,16 @@ export const MESSAGES: Message[] = [
     senderId: 'user-1',
     senderName: 'Alice',
     content: "I'm great, thanks!",
-    isOwn: true,
-    status: 'read',
+    read: true,
+    delivered: true,
   }),
   makeMessage({ senderId: 'user-2', senderName: 'Bob', content: 'Can you review my PR?' }),
   makeMessage({
     senderId: 'user-1',
     senderName: 'Alice',
     content: 'Sure, sending comments now.',
-    isOwn: true,
-    status: 'delivered',
+    delivered: true,
+    read: false,
   }),
 ];
 

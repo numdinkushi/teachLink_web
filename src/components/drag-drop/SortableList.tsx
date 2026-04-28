@@ -125,6 +125,7 @@ const SortableRow = ({
       ref={ref}
       tabIndex={0}
       role="option"
+      aria-selected={false}
       aria-grabbed={isKeyboardDragging}
       aria-selected={isKeyboardDragging}
       onKeyDown={handleKeyDown}
