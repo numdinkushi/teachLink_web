@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withRateLimit } from '@/lib/ratelimit';
+
 import { validateBody } from '@/lib/validation';
 import { LoginRequestSchema } from '@/types/api/auth.dto';
 import type { AuthResponseDTO, AuthErrorDTO } from '@/types/api/auth.dto';
+
+import type { AuthResponse } from '@/types/api';
+
 
 // ---------------------------------------------------------------------------
 // POST /api/auth/login
@@ -17,7 +21,7 @@ export async function POST(
 export async function POST(request: NextRequest) {
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'AUTH');
   if (rateLimitResponse) {
-    return rateLimitResponse as NextResponse<AuthResponse | { message: string }>;
+    return rateLimitResponse as NextResponse<{ message: string }>;
   }
 
 
@@ -31,8 +35,9 @@ export async function POST(request: NextRequest) {
     if (!email || !password) {
       return addHeaders(
         NextResponse.json({ message: 'Email and password are required' }, { status: 400 }),
-      );
+      ) as NextResponse<{ message: string }>;
     }
+
 
 
   // Mock: demo credentials
@@ -65,6 +70,54 @@ export async function POST(request: NextRequest) {
         { status: 200 },
       ),
     );
+
+    // Mock authentication - check for demo credentials
+    if (email === 'demo@teachlink.com' && password === 'password123') {
+      // Simulate successful login
+      return addHeaders(
+        NextResponse.json(
+          {
+            message: 'Login successful',
+            user: {
+              id: '1',
+              name: 'Demo User',
+              email: email,
+            },
+            token: 'mock-jwt-token-' + Date.now(),
+          },
+          { status: 200 },
+        ),
+      ) as NextResponse<AuthResponse>;
+    }
+
+    // Mock: Accept any valid email format with password length >= 6
+    if (password.length >= 6) {
+      return addHeaders(
+        NextResponse.json(
+          {
+            message: 'Login successful',
+            user: {
+              id: Math.random().toString(36).substr(2, 9),
+              name: email.split('@')[0],
+              email: email,
+            },
+            token: 'mock-jwt-token-' + Date.now(),
+          },
+          { status: 200 },
+        ),
+      ) as NextResponse<AuthResponse>;
+    }
+
+    // Invalid credentials
+    return addHeaders(
+      NextResponse.json({ message: 'Invalid email or password' }, { status: 401 }),
+    ) as NextResponse<{ message: string }>;
+  } catch (error) {
+    console.error('Login error:', error);
+    return addHeaders(
+      NextResponse.json({ message: 'Internal server error' }, { status: 500 }),
+    ) as NextResponse<{ message: string }>;
+
   }
 
   return addHeaders(NextResponse.json({ message: 'Invalid email or password' }, { status: 401 }));
