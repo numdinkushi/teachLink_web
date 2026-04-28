@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
+import { useCamera } from '@/hooks/useCamera';
 
 interface ImageUploaderProps {
   onImageSelect: (file: File) => void;
@@ -11,6 +12,9 @@ interface ImageUploaderProps {
 export default function ImageUploader({ onImageSelect, initialImageUrl }: ImageUploaderProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialImageUrl || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isCameraLoading, setIsCameraLoading] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const { captureImage, isLoading: isCapturing, error: captureError } = useCamera();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -26,6 +30,25 @@ export default function ImageUploader({ onImageSelect, initialImageUrl }: ImageU
 
   const handleClick = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleCameraClick = async () => {
+    setCameraError(null);
+    try {
+      const imageDataUrl = await captureImage();
+      if (imageDataUrl) {
+        // Convert base64 to File object
+        const response = await fetch(imageDataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `camera-image-${Date.now()}.png`, { type: 'image/png' });
+        
+        setPreviewUrl(imageDataUrl);
+        onImageSelect(file);
+      }
+    } catch (err) {
+      setCameraError('Failed to capture image');
+      console.error('Camera error:', err);
+    }
   };
 
   return (
@@ -74,6 +97,31 @@ export default function ImageUploader({ onImageSelect, initialImageUrl }: ImageU
           </span>
         </div>
       </div>
+      
+      {/* Camera Button */}
+      <button
+        onClick={handleCameraClick}
+        disabled={isCapturing || isCameraLoading}
+        className={`mt-2 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+      >
+        {isCapturing ? (
+          <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+          </svg>
+        ) : (
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 16l-1.5-1.5"></path>
+            <path d="M12 8l1.5 1.5"></path>
+          </svg>
+        )}
+      </button>
+      
+      {cameraError && (
+        <p className="mt-1 text-sm text-red-600">{cameraError}</p>
+      )}
+      
       <input
         type="file"
         ref={fileInputRef}
