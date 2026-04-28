@@ -40,12 +40,12 @@ export class ErrorBoundarySystem extends Component<ErrorBoundaryProps, ErrorBoun
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // Update state with error information
-    this.setState({
+    this.setState((prevState) => ({
       hasError: true,
       error,
       errorInfo,
-      errorCount: (this.state.errorCount ?? 0) + 1,
-    });
+      errorCount: prevState.errorCount + 1,
+    }));
 
     // Report breadcrumb if service available
     if (typeof errorReportingService?.addBreadcrumb === 'function') {

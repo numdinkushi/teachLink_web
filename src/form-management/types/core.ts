@@ -143,6 +143,7 @@ export interface FormConfiguration {
   autoSave?: AutoSaveConfiguration;
   analytics?: AnalyticsConfiguration;
   accessibility?: AccessibilityConfiguration;
+  conditionalLogic?: ConditionalRule[];
 }
 
 // Auto-Save Configuration

@@ -4,7 +4,7 @@ import { withRateLimit } from '@/lib/ratelimit';
 export async function POST(request: NextRequest) {
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'AUTH');
   if (rateLimitResponse) {
-    return rateLimitResponse as NextResponse;
+    return rateLimitResponse as NextResponse<AuthResponse | { message: string }>;
   }
 
   try {
