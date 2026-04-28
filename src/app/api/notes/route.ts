@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { VideoNote } from '@/types/api';
 import { withRateLimit } from '@/lib/ratelimit';
+
 import { validateBody, validateQuery } from '@/lib/validation';
 import {
   NotesGetQuerySchema,
@@ -21,6 +22,17 @@ import type {
 const notesStore = new Map<string, VideoNote[]>();
 
 const keyFor = (userId: string | undefined, lessonId: string): string => {
+
+import { edgeLog } from '@/../infra/edge-config';
+
+export const runtime = 'edge';
+
+type PersistedVideoNote = VideoNote;
+
+const notesStore = new Map<string, PersistedVideoNote[]>();
+
+const keyFor = (userId: string | undefined, lessonId: string) => {
+
   const safeUserId = encodeURIComponent(userId ?? 'anon');
   return `${safeUserId}::${encodeURIComponent(lessonId)}`;
 };
@@ -41,6 +53,7 @@ export async function GET(
   if (!result.ok) return addHeaders(result.error) as NextResponse;
 
 export async function GET(request: Request) {
+  edgeLog('info', '/api/notes', 'GET request received');
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
   if (rateLimitResponse) {
     return rateLimitResponse as NextResponse<ApiResponse<PersistedVideoNote[]> | SuccessResponse>;
@@ -80,6 +93,7 @@ export async function POST(
   if (!result.ok) return addHeaders(result.error) as NextResponse;
 
 export async function POST(request: Request) {
+  edgeLog('info', '/api/notes', 'POST request received');
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
   if (rateLimitResponse) {
     return rateLimitResponse as NextResponse<ApiResponse<PersistedVideoNote> | SuccessResponse>;
@@ -127,6 +141,7 @@ export async function PATCH(request: Request): Promise<NextResponse<NotesSuccess
   if (!result.ok) return addHeaders(result.error) as NextResponse;
 
 export async function PATCH(request: Request) {
+  edgeLog('info', '/api/notes', 'PATCH request received');
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
   if (rateLimitResponse) {
     return rateLimitResponse as NextResponse<SuccessResponse>;
@@ -181,6 +196,7 @@ export async function DELETE(request: Request): Promise<NextResponse<NotesSucces
   if (!result.ok) return addHeaders(result.error) as NextResponse;
 
 export async function DELETE(request: Request) {
+  edgeLog('info', '/api/notes', 'DELETE request received');
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
   if (rateLimitResponse) {
     return rateLimitResponse as NextResponse<SuccessResponse>;

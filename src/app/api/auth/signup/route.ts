@@ -17,9 +17,13 @@ export async function POST(
   if (rateLimitResponse) return rateLimitResponse as NextResponse;
 
 import type { AuthResponse } from '@/types/api';
+import { edgeLog } from '@/../infra/edge-config';
+
+export const runtime = 'edge';
 
 
 export async function POST(request: NextRequest) {
+  edgeLog('info', '/api/auth/signup', 'POST request received');
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'AUTH');
   if (rateLimitResponse) {
     return rateLimitResponse as NextResponse<{ message: string }>;

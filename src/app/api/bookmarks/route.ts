@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { VideoBookmark } from '@/types/api';
 import { withRateLimit } from '@/lib/ratelimit';
+
 import { validateBody, validateQuery } from '@/lib/validation';
 import {
   BookmarksGetQuerySchema,
@@ -21,6 +22,17 @@ import type {
 const bookmarksStore = new Map<string, VideoBookmark[]>();
 
 const keyFor = (userId: string | undefined, lessonId: string): string => {
+
+import { edgeLog } from '@/../infra/edge-config';
+
+export const runtime = 'edge';
+
+type PersistedVideoBookmark = VideoBookmark;
+
+const bookmarksStore = new Map<string, PersistedVideoBookmark[]>();
+
+const keyFor = (userId: string | undefined, lessonId: string) => {
+
   const safeUserId = encodeURIComponent(userId ?? 'anon');
   return `${safeUserId}::${encodeURIComponent(lessonId)}`;
 };
@@ -41,6 +53,7 @@ export async function GET(
   if (!result.ok) return addHeaders(result.error) as NextResponse;
 
 export async function GET(request: Request) {
+  edgeLog('info', '/api/bookmarks', 'GET request received');
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
   if (rateLimitResponse) {
     return rateLimitResponse as NextResponse<
@@ -82,6 +95,7 @@ export async function POST(
   if (!result.ok) return addHeaders(result.error) as NextResponse;
 
 export async function POST(request: Request) {
+  edgeLog('info', '/api/bookmarks', 'POST request received');
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
   if (rateLimitResponse) {
     return rateLimitResponse as NextResponse<ApiResponse<PersistedVideoBookmark> | SuccessResponse>;
@@ -130,6 +144,7 @@ export async function PATCH(request: Request): Promise<NextResponse<BookmarksSuc
   if (!result.ok) return addHeaders(result.error) as NextResponse;
 
 export async function PATCH(request: Request) {
+  edgeLog('info', '/api/bookmarks', 'PATCH request received');
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
   if (rateLimitResponse) {
     return rateLimitResponse as NextResponse<SuccessResponse>;
@@ -186,6 +201,7 @@ export async function DELETE(request: Request): Promise<NextResponse<BookmarksSu
   if (!result.ok) return addHeaders(result.error) as NextResponse;
 
 export async function DELETE(request: Request) {
+  edgeLog('info', '/api/bookmarks', 'DELETE request received');
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'WRITE');
   if (rateLimitResponse) {
     return rateLimitResponse as NextResponse<SuccessResponse>;

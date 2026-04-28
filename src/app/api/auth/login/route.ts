@@ -6,6 +6,9 @@ import { LoginRequestSchema } from '@/types/api/auth.dto';
 import type { AuthResponseDTO, AuthErrorDTO } from '@/types/api/auth.dto';
 
 import type { AuthResponse } from '@/types/api';
+import { edgeLog } from '@/../infra/edge-config';
+
+export const runtime = 'edge';
 
 
 // ---------------------------------------------------------------------------
@@ -19,6 +22,7 @@ export async function POST(
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'AUTH');
   if (rateLimitResponse) return rateLimitResponse as NextResponse;
 export async function POST(request: NextRequest) {
+  edgeLog('info', '/api/auth/login', 'POST request received');
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'AUTH');
   if (rateLimitResponse) {
     return rateLimitResponse as NextResponse<{ message: string }>;

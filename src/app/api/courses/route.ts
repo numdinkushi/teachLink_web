@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { Course, PaginatedResponse } from '@/types/api';
 import { withRateLimit } from '@/lib/ratelimit';
+
 import { validateQuery } from '@/lib/validation';
 import { CourseListQuerySchema } from '@/types/api/courses.dto';
 import type { CourseListResponseDTO } from '@/types/api/courses.dto';
@@ -9,6 +10,14 @@ import type { CourseListResponseDTO } from '@/types/api/courses.dto';
 export async function GET(request: Request): Promise<NextResponse<CourseListResponseDTO>> {
 
 export async function GET(request: Request) {
+
+
+import { edgeLog, CDN_CACHE_HEADERS } from '@/../infra/edge-config';
+
+export const runtime = 'edge';
+
+export async function GET(request: Request) {
+  edgeLog('info', '/api/courses', 'GET request received');
 
   const { addHeaders, rateLimitResponse } = withRateLimit(request, 'READ');
   if (rateLimitResponse) {
@@ -70,11 +79,13 @@ export async function GET(request: Request) {
   const nextIndex = startIndex + limit;
   const nextCursor = nextIndex < courses.length ? String(nextIndex) : undefined;
 
-  return addHeaders(
+  const response = addHeaders(
     NextResponse.json({
       data: page,
       total: courses.length,
       nextCursor,
     }),
   );
+  response.headers.set('Cache-Control', CDN_CACHE_HEADERS.public);
+  return response;
 }
